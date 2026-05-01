@@ -17,7 +17,6 @@ void main() async {
   );
 
   await StorageService.init();
-  await StorageService.clear();
   await DeviceService.init();
   DioClient.init();
 

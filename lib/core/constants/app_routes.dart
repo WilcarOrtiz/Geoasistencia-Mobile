@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geoasistencia/features/attendance/presentation/screens/mark_attendance_screen.dart';
 import 'package:geoasistencia/features/attendance/presentation/screens/my_attendance_screen.dart';
 import 'package:geoasistencia/features/auth/presentation/screens/login_screen.dart';
-import 'package:geoasistencia/features/auth/presentation/screens/onboarding_screen.dart'; // 👈
+import 'package:geoasistencia/features/auth/presentation/screens/onboarding_screen.dart';
 import 'package:geoasistencia/features/auth/presentation/screens/permission_gate_screen.dart';
 import 'package:geoasistencia/features/auth/presentation/screens/splash_screen.dart';
 import 'package:geoasistencia/features/groups/domain/group.dart';
@@ -28,7 +28,16 @@ class AppRoutes {
     login: (_) => const LoginScreen(),
     home: (_) => const HomeScreen(),
     onboarding: (_) => const OnboardingScreen(),
-    permissions: (_) => const PermissionGateScreen(),
+
+    // La PermissionGateScreen recibe el destino como argumento de navegación.
+    // Si no se le pasa argumento, por defecto va a /home.
+    permissions: (context) {
+      final nextRoute =
+          (ModalRoute.of(context)?.settings.arguments as String?) ??
+          AppRoutes.home;
+      return PermissionGateScreen(nextRoute: nextRoute);
+    },
+
     groupDetail: (context) {
       final group = ModalRoute.of(context)!.settings.arguments as Group;
       return GroupDetailScreen(group: group);

@@ -1,9 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 🔥 PERMISOS VAN AQUÍ -->
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
+    <!-- PERMISOS BLUETOOTH (Android 12+) -->
+    <!-- NOTA: neverForLocation fue removido intencionalmente.
+         Ese flag suprime el diálogo de ubicación cuando se piden
+         permisos de BT y ubicación en la misma solicitud. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+
+    <!-- PERMISOS UBICACIÓN -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     

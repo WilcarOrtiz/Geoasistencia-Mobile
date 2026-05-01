@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geoasistencia/core/services/permission_service.dart';
 import 'package:geoasistencia/core/utils/storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geoasistencia/core/constants/app_routes.dart';
@@ -16,18 +17,30 @@ class SplashScreen extends ConsumerWidget {
   void _checkSession(BuildContext context) async {
     await Future.delayed(const Duration(seconds: 1));
 
-    final session = Supabase.instance.client.auth.currentSession;
+    if (!context.mounted) return;
 
-    // ¿Ya vio el onboarding antes?
+    final session = Supabase.instance.client.auth.currentSession;
     final vioOnboarding = StorageService.getData('onboarding') == 'true';
 
-    if (!context.mounted) return;
+    // ── Determinar destino final (a donde ir DESPUÉS de permisos) ──────────
+    late final String destino;
     if (session != null) {
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
+      destino = AppRoutes.home;
     } else if (!vioOnboarding) {
-      Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
+      destino = AppRoutes.onboarding;
     } else {
-      Navigator.pushReplacementNamed(context, AppRoutes.login);
+      destino = AppRoutes.login;
     }
+
+    // ── ¿Ya tiene todos los permisos? ──────────────────────────────────────
+    // Si ya los tiene, verificamos igualmente los servicios (BT/GPS activos)
+    // pasando por PermissionGateScreen, que es quien sabe manejar todo eso.
+    // Así el flujo siempre pasa por la gate y la gate decide si hace algo.
+    if (!context.mounted) return;
+    Navigator.pushReplacementNamed(
+      context,
+      AppRoutes.permissions,
+      arguments: destino, // le decimos a la gate a dónde ir después
+    );
   }
 }
