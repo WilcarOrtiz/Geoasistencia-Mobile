@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class DioClient {
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'http://localhost:3001/api/',
+      baseUrl: 'http://192.168.80.14:3001/api/',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
@@ -23,8 +23,6 @@ class DioClient {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
-
-          print('📤 headers que salen: ${options.headers}'); // ← aquí
 
           handler.next(options);
         },

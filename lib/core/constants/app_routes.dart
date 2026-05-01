@@ -3,6 +3,7 @@ import 'package:geoasistencia/features/attendance/presentation/screens/mark_atte
 import 'package:geoasistencia/features/attendance/presentation/screens/my_attendance_screen.dart';
 import 'package:geoasistencia/features/auth/presentation/screens/login_screen.dart';
 import 'package:geoasistencia/features/auth/presentation/screens/onboarding_screen.dart'; // 👈
+import 'package:geoasistencia/features/auth/presentation/screens/permission_gate_screen.dart';
 import 'package:geoasistencia/features/auth/presentation/screens/splash_screen.dart';
 import 'package:geoasistencia/features/groups/domain/group.dart';
 import 'package:geoasistencia/features/groups/presentation/screen/group_detail_screen.dart';
@@ -20,12 +21,14 @@ class AppRoutes {
   static const String myAttendance = '/my-attendance';
   static const openSession = '/open-session';
   static const markAttendance = '/mark-attendance';
+  static const permissions = '/permissions';
 
   static final routes = {
     splash: (_) => const SplashScreen(),
     login: (_) => const LoginScreen(),
     home: (_) => const HomeScreen(),
     onboarding: (_) => const OnboardingScreen(),
+    permissions: (_) => const PermissionGateScreen(),
     groupDetail: (context) {
       final group = ModalRoute.of(context)!.settings.arguments as Group;
       return GroupDetailScreen(group: group);
@@ -38,6 +41,9 @@ class AppRoutes {
       final groupId = ModalRoute.of(context)!.settings.arguments as String;
       return OpenSessionScreen(groupId: groupId);
     },
-    markAttendance: (_) => const MarkAttendanceScreen(),
+    markAttendance: (context) {
+      final groupId = ModalRoute.of(context)!.settings.arguments as String;
+      return MarkAttendanceScreen(groupId: groupId);
+    },
   };
 }

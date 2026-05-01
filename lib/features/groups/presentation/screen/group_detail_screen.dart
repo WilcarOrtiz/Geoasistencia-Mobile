@@ -80,8 +80,11 @@ class GroupDetailScreen extends ConsumerWidget {
                   _PrimaryButton(
                     text: 'Registrar mi asistencia',
                     icon: Icons.check_circle_outline,
-                    onPressed: () =>
-                        Navigator.pushNamed(context, AppRoutes.markAttendance),
+                    onPressed: () => Navigator.pushNamed(
+                      context,
+                      AppRoutes.markAttendance,
+                      arguments: group.id, // FIX: groupId requerido
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _SecondaryButton(

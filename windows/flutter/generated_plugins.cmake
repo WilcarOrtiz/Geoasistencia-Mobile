@@ -7,7 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_ble_peripheral
   flutter_blue_plus_winrt
   geolocator_windows
-  quick_blue_windows
+  permission_handler_windows
   url_launcher_windows
 )
 

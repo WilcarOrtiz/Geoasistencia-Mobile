@@ -11,9 +11,14 @@ class OpenSessionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(openSessionProvider);
 
+    // Al salir de la pantalla cierra el BLE y la sesión en el backend
     return PopScope(
-      onPopInvokedWithResult: (_, __) =>
-          ref.read(openSessionProvider.notifier).close(),
+      canPop: state.status != OpenSessionStatus.loading,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) {
+          await ref.read(openSessionProvider.notifier).close();
+        }
+      },
       child: Scaffold(
         appBar: AppBar(title: const Text('Llamado a lista')),
         body: Padding(
@@ -33,7 +38,10 @@ class OpenSessionScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            OpenSessionStatus.active => _ActiveView(code: state.code!),
+            OpenSessionStatus.active => _ActiveView(
+              code: state.code!,
+              groupId: groupId,
+            ),
           },
         ),
       ),
@@ -54,7 +62,7 @@ class _IdleView extends ConsumerWidget {
         const Icon(Icons.sensors, size: 80, color: Colors.blue),
         const SizedBox(height: 24),
         const Text(
-          'Se usará tu ubicación GPS para verificar que los estudiantes estén cerca.',
+          'Se usará tu ubicación GPS para verificar que los estudiantes estén cerca.\nLos estudiantes recibirán el código por Bluetooth.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey),
         ),
@@ -84,12 +92,13 @@ class _IdleView extends ConsumerWidget {
   }
 }
 
-class _ActiveView extends StatelessWidget {
+class _ActiveView extends ConsumerWidget {
   final String code;
-  const _ActiveView({required this.code});
+  final String groupId;
+  const _ActiveView({required this.code, required this.groupId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -106,8 +115,27 @@ class _ActiveView extends StatelessWidget {
           style: TextStyle(color: Colors.grey),
         ),
         const SizedBox(height: 32),
-        // Ícono animado de BLE emitiendo
         const _BluetoothPulse(),
+        const SizedBox(height: 40),
+        // Botón explícito para cerrar la sesión
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.stop_circle_outlined, color: Colors.red),
+            label: const Text(
+              'Detener llamado a lista',
+              style: TextStyle(color: Colors.red),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              side: const BorderSide(color: Colors.red),
+            ),
+            onPressed: () async {
+              await ref.read(openSessionProvider.notifier).close();
+              if (context.mounted) Navigator.of(context).pop();
+            },
+          ),
+        ),
       ],
     );
   }

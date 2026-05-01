@@ -6,34 +6,39 @@ import 'package:geoasistencia/features/attendance/presentation/providers/mark_at
 import 'package:intl/intl.dart';
 
 class MarkAttendanceScreen extends ConsumerWidget {
-  const MarkAttendanceScreen({super.key});
+  final String groupId;
+  const MarkAttendanceScreen({super.key, required this.groupId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(markAttendanceProvider);
+    final state = ref.watch(markAttendanceProvider(groupId));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Registrar asistencia')),
       body: state.when(
-        data: (result) =>
-            result == null ? _ScanView() : _SuccessView(result: result),
+        data: (result) => result == null
+            ? _ScanView(groupId: groupId)
+            : _SuccessView(result: result),
         loading: () => const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Buscando sesión y verificando ubicación...'),
+              Text('Buscando sesión BLE y verificando ubicación...'),
             ],
           ),
         ),
-        error: (e, _) => _ErrorView(message: e.toString()),
+        error: (e, _) => _ErrorView(message: e.toString(), groupId: groupId),
       ),
     );
   }
 }
 
 class _ScanView extends ConsumerWidget {
+  final String groupId;
+  const _ScanView({required this.groupId});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
@@ -44,7 +49,7 @@ class _ScanView extends ConsumerWidget {
           const Icon(Icons.bluetooth_searching, size: 80, color: Colors.blue),
           const SizedBox(height: 24),
           const Text(
-            'Asegúrate de estar cerca del docente.\nSe verificará tu ubicación GPS.',
+            'Asegúrate de estar cerca del docente y tener Bluetooth activado.\nSe verificará tu ubicación GPS.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey),
           ),
@@ -57,7 +62,8 @@ class _ScanView extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              onPressed: () => ref.read(markAttendanceProvider.notifier).mark(),
+              onPressed: () =>
+                  ref.read(markAttendanceProvider(groupId).notifier).mark(),
             ),
           ),
         ],
@@ -77,7 +83,6 @@ class _SuccessView extends StatelessWidget {
 
     return Column(
       children: [
-        // Info de confirmación
         Container(
           padding: const EdgeInsets.all(20),
           color: Colors.green.shade50,
@@ -103,7 +108,6 @@ class _SuccessView extends StatelessWidget {
             ],
           ),
         ),
-        // Mapa con la ubicación del estudiante
         Expanded(
           child: GoogleMap(
             initialCameraPosition: CameraPosition(target: pos, zoom: 17),
@@ -124,7 +128,8 @@ class _SuccessView extends StatelessWidget {
 
 class _ErrorView extends ConsumerWidget {
   final String message;
-  const _ErrorView({required this.message});
+  final String groupId;
+  const _ErrorView({required this.message, required this.groupId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -142,7 +147,8 @@ class _ErrorView extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => ref.read(markAttendanceProvider.notifier).mark(),
+            onPressed: () =>
+                ref.read(markAttendanceProvider(groupId).notifier).mark(),
             child: const Text('Reintentar'),
           ),
         ],

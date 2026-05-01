@@ -34,7 +34,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     ref.listen(authProvider, (_, next) {
       next.whenOrNull(
         data: (_) {
-          Navigator.pushReplacementNamed(context, AppRoutes.home);
+          Navigator.pushReplacementNamed(context, AppRoutes.permissions);
         },
         error: (e, _) => ScaffoldMessenger.of(
           context,
