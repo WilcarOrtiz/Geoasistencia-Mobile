@@ -4,7 +4,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PermissionService {
-  static List<Permission> get _bluetoothPermissions => Platform.isIOS
+  // ── Permisos según plataforma ─────────────────────────────────────────────
+  // iOS  → Permission.bluetooth (uno solo)
+  // Android → tres permisos separados
+  static List<Permission> get _btPerms => Platform.isIOS
       ? [Permission.bluetooth]
       : [
           Permission.bluetoothScan,
@@ -12,75 +15,70 @@ class PermissionService {
           Permission.bluetoothAdvertise,
         ];
 
-  // ── ¿Ya están todos concedidos? ────────────────────────────────────────────
+  // ── Verificación silenciosa (sin diálogos) ────────────────────────────────
+  // Usar esto en el Splash para saber si YA tiene permisos.
+  // Si devuelve true → pasar directo, sin mostrar nada al usuario.
 
-  static Future<bool> allGranted() async {
-    for (final p in _bluetoothPermissions) {
+  static Future<bool> bluetoothGranted() async {
+    for (final p in _btPerms) {
       if (!(await p.status).isGranted) return false;
     }
-    final locPerm = await Geolocator.checkPermission();
-    return locPerm == LocationPermission.whileInUse ||
-        locPerm == LocationPermission.always;
+    return true;
   }
 
-  // ── Solicitar permisos ────────────────────────────────────────────────────
-
-  static Future<PermissionResult> requestAllPermissions() async {
-    // Paso 1: Bluetooth
-    for (final p in _bluetoothPermissions) {
-      final status = await p.status;
-      if (status.isPermanentlyDenied) {
-        return PermissionResult.permanentlyDenied;
-      }
-      if (!status.isGranted) {
-        final result = await p.request();
-        if (result.isPermanentlyDenied)
-          return PermissionResult.permanentlyDenied;
-        if (result.isDenied) return PermissionResult.denied;
-      }
-    }
-
-    // Pausa: iOS necesita cerrar el diálogo de BT antes de abrir el de ubicación
-    if (Platform.isIOS) {
-      await Future.delayed(const Duration(milliseconds: 800));
-    }
-
-    // Paso 2: Ubicación con geolocator
-    LocationPermission locPerm = await Geolocator.checkPermission();
-
-    if (locPerm == LocationPermission.deniedForever) {
-      return PermissionResult.permanentlyDenied;
-    }
-
-    if (locPerm == LocationPermission.denied) {
-      locPerm = await Geolocator.requestPermission();
-    }
-
-    if (locPerm == LocationPermission.deniedForever) {
-      return PermissionResult.permanentlyDenied;
-    }
-
-    if (locPerm == LocationPermission.denied) {
-      return PermissionResult.denied;
-    }
-
-    return PermissionResult.granted;
+  static Future<bool> locationGranted() async {
+    final p = await Geolocator.checkPermission();
+    return p == LocationPermission.whileInUse || p == LocationPermission.always;
   }
 
-  // ── Estado de servicios ───────────────────────────────────────────────────
+  static Future<bool> allGranted() async =>
+      await bluetoothGranted() && await locationGranted();
 
+  // ── Solicitud de Bluetooth ────────────────────────────────────────────────
+  // Devuelve el estado final tras pedir.
+  static Future<_PermStatus> requestBluetooth() async {
+    for (final p in _btPerms) {
+      final s = await p.status;
+      if (s.isPermanentlyDenied) return _PermStatus.permanentlyDenied;
+      if (!s.isGranted) {
+        final r = await p.request();
+        if (r.isPermanentlyDenied) return _PermStatus.permanentlyDenied;
+        if (r.isDenied) return _PermStatus.denied;
+      }
+    }
+    return _PermStatus.granted;
+  }
+
+  // ── Solicitud de Ubicación ────────────────────────────────────────────────
+  // Llamar SIEMPRE en un frame separado de requestBluetooth()
+  // (iOS ignora el diálogo si hay otro abierto justo antes).
+  static Future<_PermStatus> requestLocation() async {
+    LocationPermission p = await Geolocator.checkPermission();
+    if (p == LocationPermission.deniedForever) {
+      return _PermStatus.permanentlyDenied;
+    }
+    if (p == LocationPermission.denied) {
+      p = await Geolocator.requestPermission();
+    }
+    if (p == LocationPermission.deniedForever)
+      return _PermStatus.permanentlyDenied;
+    if (p == LocationPermission.denied) return _PermStatus.denied;
+    return _PermStatus.granted;
+  }
+
+  // ── Estado de servicios (encendido/apagado) ───────────────────────────────
   static Future<bool> isBluetoothOn() async {
-    final state = await FlutterBluePlus.adapterState.first;
-    return state == BluetoothAdapterState.on;
+    final s = await FlutterBluePlus.adapterState.first;
+    return s == BluetoothAdapterState.on;
   }
 
-  static Future<bool> isGpsOn() async {
-    return Geolocator.isLocationServiceEnabled();
-  }
+  static Future<bool> isGpsOn() async => Geolocator.isLocationServiceEnabled();
 
-  static Future<Map<String, bool>> servicesStatus() async {
-    return {'bluetooth': await isBluetoothOn(), 'gps': await isGpsOn()};
-  }
+  static Future<({bool bt, bool gps})> servicesStatus() async =>
+      (bt: await isBluetoothOn(), gps: await isGpsOn());
 }
 
-enum PermissionResult { granted, denied, permanentlyDenied }
+enum _PermStatus { granted, denied, permanentlyDenied }
+
+// Exportamos solo lo necesario fuera del servicio
+typedef PermStatus = _PermStatus;

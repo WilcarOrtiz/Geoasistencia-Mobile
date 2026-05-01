@@ -10,37 +10,52 @@ class SplashScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    _checkSession(context);
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    _init(context);
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
   }
 
-  void _checkSession(BuildContext context) async {
+  Future<void> _init(BuildContext context) async {
     await Future.delayed(const Duration(seconds: 1));
-
     if (!context.mounted) return;
 
     final session = Supabase.instance.client.auth.currentSession;
     final vioOnboarding = StorageService.getData('onboarding') == 'true';
+    final permsOk = await PermissionService.allGranted();
+    if (!context.mounted) return;
 
-    // ── Determinar destino final (a donde ir DESPUÉS de permisos) ──────────
-    late final String destino;
-    if (session != null) {
-      destino = AppRoutes.home;
-    } else if (!vioOnboarding) {
-      destino = AppRoutes.onboarding;
-    } else {
-      destino = AppRoutes.login;
+    // ── Casos posibles ────────────────────────────────────────────────────
+    //
+    // 1. Primera vez (nunca vio onboarding):
+    //    → Onboarding (que pide permisos al final y luego va a Login)
+    //
+    // 2. Ya vio onboarding, permisos OK, sesión activa:
+    //    → Home  (flujo diario normal, sin interrupciones)
+    //
+    // 3. Ya vio onboarding, permisos OK, sin sesión:
+    //    → Login
+    //
+    // 4. Ya vio onboarding pero permisos faltan (ej: usuario los revocó):
+    //    → PermissionGate → Login o Home según sesión
+    //
+    if (!vioOnboarding) {
+      Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
+      return;
     }
 
-    // ── ¿Ya tiene todos los permisos? ──────────────────────────────────────
-    // Si ya los tiene, verificamos igualmente los servicios (BT/GPS activos)
-    // pasando por PermissionGateScreen, que es quien sabe manejar todo eso.
-    // Así el flujo siempre pasa por la gate y la gate decide si hace algo.
-    if (!context.mounted) return;
+    if (permsOk) {
+      final destino = session != null ? AppRoutes.home : AppRoutes.login;
+      Navigator.pushReplacementNamed(context, destino);
+      return;
+    }
+
+    // Permisos revocados después de haber visto el onboarding
+    final destino = session != null ? AppRoutes.home : AppRoutes.login;
     Navigator.pushReplacementNamed(
       context,
       AppRoutes.permissions,
-      arguments: destino, // le decimos a la gate a dónde ir después
+      arguments: destino,
     );
   }
 }
