@@ -5,40 +5,30 @@ import 'package:geoasistencia/core/utils/storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geoasistencia/core/constants/app_routes.dart';
 
-class SplashScreen extends ConsumerWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    _init(context);
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // ✅ Solo se llama UNA vez, no en cada rebuild
+    WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
-  Future<void> _init(BuildContext context) async {
+  Future<void> _init() async {
     await Future.delayed(const Duration(seconds: 1));
-    if (!context.mounted) return;
+    if (!mounted) return;
 
     final session = Supabase.instance.client.auth.currentSession;
     final vioOnboarding = StorageService.getData('onboarding') == 'true';
     final permsOk = await PermissionService.allGranted();
-    if (!context.mounted) return;
+    if (!mounted) return;
 
-    // ── Casos posibles ────────────────────────────────────────────────────
-    //
-    // 1. Primera vez (nunca vio onboarding):
-    //    → Onboarding (que pide permisos al final y luego va a Login)
-    //
-    // 2. Ya vio onboarding, permisos OK, sesión activa:
-    //    → Home  (flujo diario normal, sin interrupciones)
-    //
-    // 3. Ya vio onboarding, permisos OK, sin sesión:
-    //    → Login
-    //
-    // 4. Ya vio onboarding pero permisos faltan (ej: usuario los revocó):
-    //    → PermissionGate → Login o Home según sesión
-    //
     if (!vioOnboarding) {
       Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
       return;
@@ -50,12 +40,16 @@ class SplashScreen extends ConsumerWidget {
       return;
     }
 
-    // Permisos revocados después de haber visto el onboarding
     final destino = session != null ? AppRoutes.home : AppRoutes.login;
     Navigator.pushReplacementNamed(
       context,
       AppRoutes.permissions,
       arguments: destino,
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

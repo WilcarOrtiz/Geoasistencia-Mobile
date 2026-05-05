@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class DioClient {
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'http://192.168.80.14:3001/api/',
+      baseUrl: 'https://6bqlsbfc-3001.use2.devtunnels.ms/api/',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},

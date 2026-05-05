@@ -16,10 +16,22 @@ class PermissionService {
         ];
 
   // ── Verificación silenciosa (sin diálogos) ────────────────────────────────
-  // Usar esto en el Splash para saber si YA tiene permisos.
-  // Si devuelve true → pasar directo, sin mostrar nada al usuario.
-
   static Future<bool> bluetoothGranted() async {
+    if (Platform.isIOS) {
+      try {
+        final state = await FlutterBluePlus.adapterState
+            .firstWhere((s) => s != BluetoothAdapterState.unknown)
+            .timeout(
+              const Duration(seconds: 3),
+              onTimeout: () => BluetoothAdapterState.unauthorized,
+            );
+        return state != BluetoothAdapterState.unauthorized;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    // Android → comportamiento original
     for (final p in _btPerms) {
       if (!(await p.status).isGranted) return false;
     }
@@ -35,7 +47,6 @@ class PermissionService {
       await bluetoothGranted() && await locationGranted();
 
   // ── Solicitud de Bluetooth ────────────────────────────────────────────────
-  // Devuelve el estado final tras pedir.
   static Future<_PermStatus> requestBluetooth() async {
     for (final p in _btPerms) {
       final s = await p.status;
@@ -50,8 +61,6 @@ class PermissionService {
   }
 
   // ── Solicitud de Ubicación ────────────────────────────────────────────────
-  // Llamar SIEMPRE en un frame separado de requestBluetooth()
-  // (iOS ignora el diálogo si hay otro abierto justo antes).
   static Future<_PermStatus> requestLocation() async {
     LocationPermission p = await Geolocator.checkPermission();
     if (p == LocationPermission.deniedForever) {
@@ -67,9 +76,18 @@ class PermissionService {
   }
 
   // ── Estado de servicios (encendido/apagado) ───────────────────────────────
+
+  // ✅ CAMBIO: espera a que iOS reporte un estado real del adaptador
+  // antes devolvía .first que capturaba "unknown" y retornaba false
   static Future<bool> isBluetoothOn() async {
-    final s = await FlutterBluePlus.adapterState.first;
-    return s == BluetoothAdapterState.on;
+    try {
+      final state = await FlutterBluePlus.adapterState
+          .firstWhere((s) => s != BluetoothAdapterState.unknown)
+          .timeout(const Duration(seconds: 3));
+      return state == BluetoothAdapterState.on;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<bool> isGpsOn() async => Geolocator.isLocationServiceEnabled();
@@ -80,5 +98,4 @@ class PermissionService {
 
 enum _PermStatus { granted, denied, permanentlyDenied }
 
-// Exportamos solo lo necesario fuera del servicio
 typedef PermStatus = _PermStatus;

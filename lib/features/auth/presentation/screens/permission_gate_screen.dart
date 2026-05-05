@@ -3,17 +3,6 @@ import 'package:geoasistencia/core/services/permission_service.dart';
 import 'package:geoasistencia/core/constants/app_routes.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PermissionGateScreen
-//
-// Solo se muestra en casos excepcionales:
-//   · El usuario revocó un permiso desde Ajustes del sistema
-//   · Dispositivo muy restrictivo
-//
-// En el flujo normal (uso diario) el Splash detecta allGranted() == true
-// y nunca llega aquí.
-// ─────────────────────────────────────────────────────────────────────────────
-
 class PermissionGateScreen extends StatefulWidget {
   final String nextRoute;
   const PermissionGateScreen({super.key, required this.nextRoute});
@@ -41,15 +30,22 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
     super.dispose();
   }
 
-  // Cuando vuelve de Ajustes del sistema
   @override
   void didChangeAppLifecycleState(AppLifecycleState s) {
-    if (s == AppLifecycleState.resumed) _run();
+    if (s == AppLifecycleState.resumed) {
+      // ✅ Espera un momento antes de verificar
+      // iOS necesita tiempo para actualizar el estado del BT
+      Future.delayed(const Duration(milliseconds: 800), _run);
+    }
   }
 
   Future<void> _run() async {
     if (!mounted) return;
     setState(() => _s = _State.checking);
+
+    // ✅ Pequeña pausa adicional para que el adaptador BT se estabilice
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
 
     final ok = await PermissionService.allGranted();
     if (!mounted) return;
@@ -59,7 +55,6 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
       return;
     }
 
-    // Verificar servicios encendidos
     final sv = await PermissionService.servicesStatus();
     if (!mounted) return;
 
@@ -72,6 +67,8 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
       return;
     }
 
+    // ✅ Verifica que sigue montado antes de navegar
+    if (!mounted) return;
     Navigator.pushReplacementNamed(context, widget.nextRoute);
   }
 
@@ -94,8 +91,6 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
 }
 
 enum _State { checking, permsDenied, servicesOff }
-
-// ── Widgets internos ──────────────────────────────────────────────────────────
 
 class _Loading extends StatelessWidget {
   const _Loading();

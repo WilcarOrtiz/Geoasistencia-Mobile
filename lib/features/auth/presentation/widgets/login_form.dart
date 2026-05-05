@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geoasistencia/core/constants/app_routes.dart';
+import 'package:geoasistencia/core/services/permission_service.dart';
 import 'package:geoasistencia/features/auth/presentation/providers/auth_provider.dart';
 
 class LoginForm extends ConsumerStatefulWidget {
@@ -33,8 +34,21 @@ class _LoginFormState extends ConsumerState<LoginForm> {
 
     ref.listen(authProvider, (_, next) {
       next.whenOrNull(
-        data: (_) {
-          Navigator.pushReplacementNamed(context, AppRoutes.permissions);
+        data: (_) async {
+          // ✅ Si ya tiene permisos va directo al home
+          // Si no, pasa por PermissionGate
+          final permsOk = await PermissionService.allGranted();
+          if (!context.mounted) return;
+
+          if (permsOk) {
+            Navigator.pushReplacementNamed(context, AppRoutes.home);
+          } else {
+            Navigator.pushReplacementNamed(
+              context,
+              AppRoutes.permissions,
+              arguments: AppRoutes.home,
+            );
+          }
         },
         error: (e, _) => ScaffoldMessenger.of(
           context,

@@ -4,6 +4,7 @@ import 'package:geoasistencia/core/services/ble_service.dart';
 import 'package:geoasistencia/core/services/permission_service.dart';
 import 'package:geoasistencia/features/attendance/data/attendance_service.dart';
 import 'package:geoasistencia/features/auth/presentation/providers/auth_provider.dart';
+import 'package:geoasistencia/features/sessions/data/class_session_service.dart';
 import 'package:geolocator/geolocator.dart';
 
 class AttendanceResult {
@@ -38,7 +39,15 @@ class MarkAttendanceNotifier
     try {
       // 2. Escanear BLE y obtener el código emitido por el docente
       //    Si lo recibe → está físicamente cerca (~10 m)
-      final code = await BleService.scanForCode();
+      final sessionCode = await ClassSessionService().getActiveSessionCode(
+        groupId,
+      );
+
+      if (sessionCode == null) {
+        throw Exception('No hay sesión activa en tu grupo.');
+      }
+
+      final code = await BleService.scanForCode(sessionCode);
 
       // 3. GPS del estudiante
       final pos = await Geolocator.getCurrentPosition(

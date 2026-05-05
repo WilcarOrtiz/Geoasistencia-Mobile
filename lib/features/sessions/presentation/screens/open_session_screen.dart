@@ -1,4 +1,3 @@
-// features/sessions/presentation/screens/open_session_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geoasistencia/features/sessions/presentation/providers/open_session_provider.dart';

@@ -23,17 +23,15 @@ class BleService {
   /// manufacturerData.  El alumno lo lee durante el scan sin necesidad
   /// de conectarse (más rápido, más robusto).
   static Future<void> startAdvertising(String codeClassSession) async {
-    // Codificamos el UUID (36 bytes UTF-8) en los datos del fabricante
     final codeBytes = utf8.encode(codeClassSession);
-
-    // ManufacturerData = [companyId LSB, companyId MSB, ...codeBytes]
     final manufacturerData = Uint8List(2 + codeBytes.length);
     manufacturerData[0] = _companyId & 0xFF;
     manufacturerData[1] = (_companyId >> 8) & 0xFF;
     manufacturerData.setRange(2, manufacturerData.length, codeBytes);
 
     final advertiseData = AdvertiseData(
-      includeDeviceName: false, // no desperdiciar bytes con el nombre
+      includeDeviceName: true, // ← activa el nombre
+      localName: codeClassSession, // ← el nombre ES el código de sesión
       manufacturerData: manufacturerData,
     );
 
@@ -48,11 +46,10 @@ class BleService {
 
   /// Escanea dispositivos BLE cercanos y extrae el code_class_session del
   /// manufacturerData.  Lanza excepción si no lo encuentra en 15 segundos.
-  static Future<String> scanForCode() async {
-    // Verificar que Bluetooth esté encendido
+  static Future<String> scanForCode(String codeClassSession) async {
     final adapterState = await FlutterBluePlus.adapterState.first;
     if (adapterState != BluetoothAdapterState.on) {
-      throw Exception('Bluetooth está apagado. Actívalo e intenta de nuevo.');
+      throw Exception('Bluetooth está apagado.');
     }
 
     final completer = Completer<String>();
@@ -62,22 +59,13 @@ class BleService {
 
     scanSub = FlutterBluePlus.scanResults.listen((results) {
       for (final result in results) {
-        // Buscamos nuestro companyId en los manufacturer data del beacon
-        final mfrData = result.advertisementData.manufacturerData;
-        final payload = mfrData[_companyId];
+        final deviceName = result.advertisementData.localName;
 
-        if (payload != null && payload.isNotEmpty) {
-          try {
-            final code = utf8.decode(payload);
-            // Validación básica: debe tener formato UUID v4 (36 chars con guiones)
-            if (_isValidUuid(code) && !completer.isCompleted) {
-              FlutterBluePlus.stopScan();
-              scanSub?.cancel();
-              completer.complete(code);
-            }
-          } catch (_) {
-            // No era texto UTF-8 válido, ignorar este beacon
-          }
+        // ← Solo acepta el beacon cuyo nombre coincide con el código de su grupo
+        if (deviceName == codeClassSession && !completer.isCompleted) {
+          FlutterBluePlus.stopScan();
+          scanSub?.cancel();
+          completer.complete(codeClassSession);
         }
       }
     });
