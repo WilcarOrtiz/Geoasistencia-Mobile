@@ -1,7 +1,7 @@
 import 'package:geoasistencia/core/network/api_response.dart';
 import 'package:geoasistencia/core/network/dio_client.dart';
+import 'package:geoasistencia/features/sessions/domain/attendance_record.dart';
 
-/// Resultado que devuelve el backend al crear una sesión
 class OpenSessionResult {
   final String sessionId;
   final String codeClassSession;
@@ -21,15 +21,6 @@ class ClassSessionService {
     required double longitude,
     String? classTopic,
   }) async {
-    // 🟡 1. ANTES de enviar (qué estás mandando)
-    print('📤 [POST] /class-sessions');
-    print({
-      'group_id': groupId,
-      'latitude': latitude,
-      'longitude': longitude,
-      'class_topic': classTopic,
-    });
-
     final res = await _dio.post(
       '/class-sessions',
       data: {
@@ -45,9 +36,6 @@ class ClassSessionService {
       (json) => json as Map<String, dynamic>,
     );
 
-    print('📥 message: ${response.message}');
-    print('📥 ok: ${response.ok}');
-
     final data = response.data!;
 
     final sessionId = data['id'] as String;
@@ -56,21 +44,37 @@ class ClassSessionService {
     return OpenSessionResult(sessionId: sessionId, codeClassSession: code);
   }
 
+  Future<List<AttendanceRecord>> getAttendances(String sessionId) async {
+    final res = await _dio.get('/class-sessions/$sessionId/attendances');
+
+    final response = ApiResponse<List<dynamic>>.fromJson(
+      res.data,
+      (json) => json as List<dynamic>,
+    );
+
+    if (!response.ok || response.data == null) return [];
+
+    return response.data!
+        .map((e) => AttendanceRecord.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<String?> getActiveSessionCode(String groupId) async {
     final res = await _dio.get('/class-sessions/group/$groupId/active');
 
-    if (res.data == null) return null;
+    final response = ApiResponse<Map<String, dynamic>>.fromJson(
+      res.data,
+      (json) => json as Map<String, dynamic>,
+    );
 
-    final data = res.data as Map<String, dynamic>;
+    final data = response.data;
+
+    if (data == null) return null;
+
     return data['codeClassSession'] as String?;
   }
 
   Future<void> closeSession(String sessionId) async {
-    // 🟡 4. Log al cerrar
-    print('🛑 [PATCH] Cerrar sesión: $sessionId');
-
     await _dio.patch('/class-sessions/$sessionId/close');
-
-    print('✅ Sesión cerrada correctamente');
   }
 }

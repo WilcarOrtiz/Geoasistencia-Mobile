@@ -29,8 +29,6 @@ class AppRoutes {
     home: (_) => const HomeScreen(),
     onboarding: (_) => const OnboardingScreen(),
 
-    // La PermissionGateScreen recibe el destino como argumento de navegación.
-    // Si no se le pasa argumento, por defecto va a /home.
     permissions: (context) {
       final nextRoute =
           (ModalRoute.of(context)?.settings.arguments as String?) ??

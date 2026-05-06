@@ -35,37 +35,56 @@ class MarkAttendanceNotifier
     : super(const AsyncValue.data(null));
 
   Future<void> mark() async {
+    print('🚀 [MARK] Inicio proceso de asistencia');
     state = const AsyncValue.loading();
+
     try {
-      // 2. Escanear BLE y obtener el código emitido por el docente
-      //    Si lo recibe → está físicamente cerca (~10 m)
+      // 1. Obtener código de sesión activa
+      print('🔎 [STEP 1] Buscando sesión activa...');
       final sessionCode = await ClassSessionService().getActiveSessionCode(
         groupId,
       );
+      print('📦 [STEP 1] sessionCode: $sessionCode');
 
       if (sessionCode == null) {
+        print('❌ [STEP 1] No hay sesión activa');
         throw Exception('No hay sesión activa en tu grupo.');
       }
 
+      // 2. Escanear BLE
+      print('📡 [STEP 2] Escaneando BLE...');
       final code = await BleService.scanForCode(sessionCode);
+      print('📡 [STEP 2] Código recibido por BLE: $code');
 
-      // 3. GPS del estudiante
+      // 3. GPS
+      print('📍 [STEP 3] Obteniendo ubicación...');
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
+      print('📍 [STEP 3] Lat: ${pos.latitude}, Lng: ${pos.longitude}');
 
-      // 4. ID del estudiante desde el estado de auth
+      // 4. Usuario
+      print('👤 [STEP 4] Obteniendo usuario...');
       final authData = _ref.read(authProvider).asData?.value;
       final studentId = authData?.user.authId;
-      if (studentId == null) throw Exception('Usuario no autenticado');
 
-      // 5. Llamar al backend — valida código + distancia GPS
+      print('👤 [STEP 4] studentId: $studentId');
+
+      if (studentId == null) {
+        print('❌ [STEP 4] Usuario no autenticado');
+        throw Exception('Usuario no autenticado');
+      }
+
+      // 5. Backend
+      print('🌐 [STEP 5] Enviando asistencia al backend...');
       await AttendanceService().markAttendance(
         studentId: studentId,
         codeClassSession: code,
         latitude: pos.latitude,
         longitude: pos.longitude,
       );
+
+      print('✅ [STEP 5] Asistencia registrada correctamente');
 
       state = AsyncValue.data(
         AttendanceResult(
@@ -75,6 +94,9 @@ class MarkAttendanceNotifier
         ),
       );
     } catch (e, st) {
+      print('💥 [ERROR] $e');
+      print('📚 [STACK] $st');
+
       state = AsyncValue.error(e, st);
     }
   }

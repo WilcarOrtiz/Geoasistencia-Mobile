@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geoasistencia/core/constants/app_routes.dart';
+import 'package:geoasistencia/core/errors/auth_exceptions.dart';
 import 'package:geoasistencia/core/services/permission_service.dart';
+import 'package:geoasistencia/core/utils/app_toast.dart';
 import 'package:geoasistencia/features/auth/presentation/providers/auth_provider.dart';
 
 class LoginForm extends ConsumerStatefulWidget {
@@ -35,8 +37,6 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     ref.listen(authProvider, (_, next) {
       next.whenOrNull(
         data: (_) async {
-          // ✅ Si ya tiene permisos va directo al home
-          // Si no, pasa por PermissionGate
           final permsOk = await PermissionService.allGranted();
           if (!context.mounted) return;
 
@@ -50,9 +50,22 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             );
           }
         },
-        error: (e, _) => ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e'))),
+        error: (e, _) {
+          switch (e) {
+            case InvalidCredentialsException():
+              AppToast.error(
+                context,
+                e.message,
+                title: 'Credenciales incorrectas',
+              );
+            case UserNotFoundException():
+              AppToast.error(context, e.message, title: 'Usuario sin acceso');
+            case ServerException():
+              AppToast.error(context, e.message, title: 'Error del servidor');
+            default:
+              AppToast.error(context, e.toString(), title: 'Error inesperado');
+          }
+        },
       );
     });
 

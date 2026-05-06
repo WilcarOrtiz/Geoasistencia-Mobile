@@ -1,38 +1,18 @@
-// DOCENTE  → anuncia como periférico BLE con flutter_ble_peripheral
-//            el código de sesión va en el campo manufacturerData del beacon.
-//
-// ALUMNO   → escanea con flutter_blue_plus, lee manufacturerData del beacon,
-//            extrae el código.  Solo recibe el código si está físicamente cerca
-//            (~10 m), que es la verificación de proximidad requerida.
-
 import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class BleService {
-  // Company ID arbitrario para el manufacturer data (0xFFFF = sin registro)
-  static const int _companyId = 0xFFFF;
+  static final _peripheral = FlutterBlePeripheral();
 
   // ── DOCENTE: emitir código ──────────────────────────────────────────────────
 
-  static final _peripheral = FlutterBlePeripheral();
-
-  /// Inicia el advertising BLE con el código de sesión embebido en
-  /// manufacturerData.  El alumno lo lee durante el scan sin necesidad
-  /// de conectarse (más rápido, más robusto).
+  /// El código de sesión SE USA DIRECTAMENTE como ServiceUUID.
+  /// iOS lo expone completo y sin truncar durante el scan.
   static Future<void> startAdvertising(String codeClassSession) async {
-    final codeBytes = utf8.encode(codeClassSession);
-    final manufacturerData = Uint8List(2 + codeBytes.length);
-    manufacturerData[0] = _companyId & 0xFF;
-    manufacturerData[1] = (_companyId >> 8) & 0xFF;
-    manufacturerData.setRange(2, manufacturerData.length, codeBytes);
-
     final advertiseData = AdvertiseData(
-      includeDeviceName: true, // ← activa el nombre
-      localName: codeClassSession, // ← el nombre ES el código de sesión
-      manufacturerData: manufacturerData,
+      serviceUuid: codeClassSession, // ← UUID completo como service
+      includeDeviceName: false, // ya no necesitamos el nombre
     );
 
     await _peripheral.start(advertiseData: advertiseData);
@@ -44,8 +24,6 @@ class BleService {
 
   // ── ALUMNO: escanear y leer código ─────────────────────────────────────────
 
-  /// Escanea dispositivos BLE cercanos y extrae el code_class_session del
-  /// manufacturerData.  Lanza excepción si no lo encuentra en 15 segundos.
   static Future<String> scanForCode(String codeClassSession) async {
     final adapterState = await FlutterBluePlus.adapterState.first;
     if (adapterState != BluetoothAdapterState.on) {
@@ -55,14 +33,25 @@ class BleService {
     final completer = Completer<String>();
     StreamSubscription? scanSub;
 
-    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 12));
+    // Filtra directamente por el serviceUUID → más eficiente, menos batería
+    await FlutterBluePlus.startScan(
+      withServices: [Guid(codeClassSession)],
+      timeout: const Duration(seconds: 15),
+    );
 
     scanSub = FlutterBluePlus.scanResults.listen((results) {
       for (final result in results) {
-        final deviceName = result.advertisementData.localName;
+        final services = result.advertisementData.serviceUuids;
 
-        // ← Solo acepta el beacon cuyo nombre coincide con el código de su grupo
-        if (deviceName == codeClassSession && !completer.isCompleted) {
+        print('📡 DEVICE: ${result.device.remoteId}');
+        print('📡 SERVICES: $services');
+        print('📡 RSSI: ${result.rssi}');
+
+        final found = services.any(
+          (s) => s.toString().toLowerCase() == codeClassSession.toLowerCase(),
+        );
+
+        if (found && !completer.isCompleted) {
           FlutterBluePlus.stopScan();
           scanSub?.cancel();
           completer.complete(codeClassSession);
@@ -84,13 +73,5 @@ class BleService {
         );
       },
     );
-  }
-
-  static bool _isValidUuid(String s) {
-    final uuidRegex = RegExp(
-      r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
-      caseSensitive: false,
-    );
-    return uuidRegex.hasMatch(s);
   }
 }

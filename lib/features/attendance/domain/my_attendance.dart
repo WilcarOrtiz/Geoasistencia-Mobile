@@ -1,6 +1,6 @@
 class MyAttendanceSession {
   final String sessionId;
-  final String classTopic;
+  final String? classTopic;
   final DateTime date;
   final String status;
   final String? checkInTime;

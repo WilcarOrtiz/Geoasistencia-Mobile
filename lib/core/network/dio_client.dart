@@ -1,10 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class DioClient {
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://6bqlsbfc-3001.use2.devtunnels.ms/api/',
+      baseUrl: dotenv.env['API_URL']!,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
@@ -25,6 +26,19 @@ class DioClient {
           }
 
           handler.next(options);
+        },
+        onError: (error, handler) {
+          String message = 'Error inesperado';
+
+          if (error.response?.data is Map) {
+            final data = error.response?.data;
+
+            if (data['message'] != null) message = data['message'];
+          }
+
+          handler.reject(
+            DioException(requestOptions: error.requestOptions, error: message),
+          );
         },
       ),
     );

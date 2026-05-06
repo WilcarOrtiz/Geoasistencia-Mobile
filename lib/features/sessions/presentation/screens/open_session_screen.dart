@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geoasistencia/core/utils/app_toast.dart';
+import 'package:geoasistencia/features/sessions/domain/attendance_record.dart';
+import 'package:geoasistencia/features/sessions/domain/session_state.dart';
+import 'package:geoasistencia/features/sessions/presentation/providers/attendance_provider.dart';
 import 'package:geoasistencia/features/sessions/presentation/providers/open_session_provider.dart';
 
 class OpenSessionScreen extends ConsumerWidget {
@@ -9,6 +13,11 @@ class OpenSessionScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(openSessionProvider);
+    ref.listen(openSessionProvider, (prev, next) {
+      if (next.status == OpenSessionStatus.error && next.error != null) {
+        AppToast.error(context, next.error!);
+      }
+    });
 
     // Al salir de la pantalla cierra el BLE y la sesión en el backend
     return PopScope(
@@ -40,6 +49,7 @@ class OpenSessionScreen extends ConsumerWidget {
             OpenSessionStatus.active => _ActiveView(
               code: state.code!,
               groupId: groupId,
+              sessionId: state.sessionId!,
             ),
           },
         ),
@@ -65,14 +75,7 @@ class _IdleView extends ConsumerWidget {
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey),
         ),
-        if (error != null) ...[
-          const SizedBox(height: 16),
-          Text(
-            error!,
-            style: const TextStyle(color: Colors.red),
-            textAlign: TextAlign.center,
-          ),
-        ],
+
         const SizedBox(height: 32),
         SizedBox(
           width: double.infinity,
@@ -94,14 +97,21 @@ class _IdleView extends ConsumerWidget {
 class _ActiveView extends ConsumerWidget {
   final String code;
   final String groupId;
-  const _ActiveView({required this.code, required this.groupId});
+  final String sessionId;
+  const _ActiveView({
+    required this.code,
+    required this.groupId,
+    required this.sessionId,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final attendances = ref.watch(attendanceProvider(sessionId));
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.bluetooth_searching, size: 80, color: Colors.green),
+        const _BluetoothPulse(),
         const SizedBox(height: 16),
         const Text(
           'Sesión activa',
@@ -113,10 +123,14 @@ class _ActiveView extends ConsumerWidget {
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey),
         ),
-        const SizedBox(height: 32),
-        const _BluetoothPulse(),
-        const SizedBox(height: 40),
-        // Botón explícito para cerrar la sesión
+        Expanded(
+          child: attendances.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (records) => _AttendanceList(records: records),
+          ),
+        ),
+        const SizedBox(height: 60),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -172,7 +186,67 @@ class _BluetoothPulseState extends State<_BluetoothPulse>
   Widget build(BuildContext context) {
     return ScaleTransition(
       scale: _anim,
-      child: const Icon(Icons.bluetooth, size: 60, color: Colors.blue),
+      child: const Icon(
+        Icons.bluetooth_searching,
+        size: 80,
+        color: Colors.blue,
+      ),
+    );
+  }
+}
+
+class _AttendanceList extends StatelessWidget {
+  final List<AttendanceRecord> records;
+  const _AttendanceList({required this.records});
+
+  @override
+  Widget build(BuildContext context) {
+    final present = records
+        .where((r) => r.status != AttendanceStatus.absent)
+        .toList();
+    final absent = records
+        .where((r) => r.status == AttendanceStatus.absent)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Presentes: ${present.length} / ${records.length}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: ListView(
+            children: [
+              ...present.map((r) => _AttendanceTile(record: r)),
+              ...absent.map((r) => _AttendanceTile(record: r)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AttendanceTile extends StatelessWidget {
+  final AttendanceRecord record;
+  const _AttendanceTile({required this.record});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPresent = record.status != AttendanceStatus.absent;
+    return ListTile(
+      leading: Icon(
+        isPresent ? Icons.check_circle : Icons.radio_button_unchecked,
+        color: isPresent ? Colors.green : Colors.grey,
+      ),
+      title: Text(record.studentName),
+      subtitle: record.checkInTime != null
+          ? Text(
+              'Marcó a las ${TimeOfDay.fromDateTime(record.checkInTime!).format(context)}',
+            )
+          : const Text('Sin marcar', style: TextStyle(color: Colors.grey)),
     );
   }
 }

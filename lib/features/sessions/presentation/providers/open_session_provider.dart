@@ -1,37 +1,9 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:geoasistencia/core/services/ble_service.dart';
-import 'package:geoasistencia/core/services/permission_service.dart';
 import 'package:geoasistencia/features/sessions/data/class_session_service.dart';
+import 'package:geoasistencia/features/sessions/domain/session_state.dart';
 import 'package:geolocator/geolocator.dart';
-
-enum OpenSessionStatus { idle, loading, active, error }
-
-class OpenSessionState {
-  final OpenSessionStatus status;
-  final String? code;
-  final String? sessionId;
-  final String? error;
-
-  const OpenSessionState({
-    this.status = OpenSessionStatus.idle,
-    this.code,
-    this.sessionId,
-    this.error,
-  });
-
-  OpenSessionState copyWith({
-    OpenSessionStatus? status,
-    String? code,
-    String? sessionId,
-    String? error,
-  }) => OpenSessionState(
-    status: status ?? this.status,
-    code: code ?? this.code,
-    sessionId: sessionId ?? this.sessionId,
-    error: error ?? this.error,
-  );
-}
 
 final openSessionProvider =
     StateNotifierProvider<OpenSessionNotifier, OpenSessionState>(
@@ -66,10 +38,13 @@ class OpenSessionNotifier extends StateNotifier<OpenSessionState> {
         sessionId: result.sessionId,
       );
     } catch (e) {
-      state = state.copyWith(
-        status: OpenSessionStatus.error,
-        error: e.toString(),
-      );
+      String message = 'Error inesperado';
+      if (e is DioException) {
+        message = e.error?.toString() ?? message;
+      } else {
+        message = e.toString();
+      }
+      state = state.copyWith(status: OpenSessionStatus.error, error: message);
     }
   }
 

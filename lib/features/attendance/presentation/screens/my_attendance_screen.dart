@@ -45,8 +45,8 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final rate = data.attendanceRate;
+
     final color = rate >= 80
         ? Colors.green
         : rate >= 60
@@ -103,6 +103,7 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -130,21 +131,26 @@ class _StatChip extends StatelessWidget {
 
 class _SessionList extends StatelessWidget {
   final List<MyAttendanceSession> sessions;
+
   const _SessionList({required this.sessions});
 
   @override
   Widget build(BuildContext context) {
+    // 👇 opcional: ordenar por fecha más reciente primero
+    final sorted = [...sessions]..sort((a, b) => b.date.compareTo(a.date));
+
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: sessions.length,
+      itemCount: sorted.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (_, i) => _SessionTile(session: sessions[i]),
+      itemBuilder: (_, i) => _SessionTile(session: sorted[i]),
     );
   }
 }
 
 class _SessionTile extends StatelessWidget {
   final MyAttendanceSession session;
+
   const _SessionTile({required this.session});
 
   Color get _statusColor => switch (session.status) {
@@ -165,33 +171,29 @@ class _SessionTile extends StatelessWidget {
     _ => 'Ausente',
   };
 
+  String get _formattedDate {
+    final d = session.date;
+    return '${d.day}/${d.month}/${d.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final date = session.date;
-    final dateStr = '${date.day}/${date.month}/${date.year}';
-
     return Card(
       child: ListTile(
         leading: Icon(_statusIcon, color: _statusColor),
-        title: Text(session.classTopic),
-        subtitle: Text(dateStr),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              _statusLabel,
-              style: TextStyle(
-                color: _statusColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if (session.checkInTime != null)
-              Text(
-                session.checkInTime!,
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
-              ),
-          ],
+
+        // 👇 ahora solo fecha
+        title: Text(_formattedDate),
+
+        // 👇 hora (si existe)
+        subtitle: session.checkInTime != null
+            ? Text('Hora: ${session.checkInTime}')
+            : null,
+
+        // 👇 estado
+        trailing: Text(
+          _statusLabel,
+          style: TextStyle(color: _statusColor, fontWeight: FontWeight.w600),
         ),
       ),
     );
