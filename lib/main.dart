@@ -6,9 +6,11 @@ import 'package:geoasistencia/core/utils/storage.dart';
 import 'package:geoasistencia/features/auth/data/device_uuid_servoce.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es', null);
   await dotenv.load();
 
   await Supabase.initialize(

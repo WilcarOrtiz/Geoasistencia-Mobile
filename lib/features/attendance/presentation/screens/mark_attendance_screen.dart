@@ -79,6 +79,157 @@ class _SuccessView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pos = LatLng(result.latitude, result.longitude);
+    final hour = DateFormat('hh:mm a').format(result.markedAt);
+    final day = DateFormat('dd').format(result.markedAt);
+    final month = DateFormat('MMMM', 'es').format(result.markedAt);
+
+    return Column(
+      children: [
+        // ── Mapa ──────────────────────────────────────────────
+        SizedBox(
+          height: 260,
+          child: GoogleMap(
+            initialCameraPosition: CameraPosition(target: pos, zoom: 17),
+            markers: {
+              Marker(
+                markerId: const MarkerId('student'),
+                position: pos,
+                infoWindow: InfoWindow(title: 'Tu ubicación'),
+              ),
+            },
+            myLocationEnabled: false,
+            zoomControlsEnabled: false,
+            scrollGesturesEnabled: false,
+            rotateGesturesEnabled: false,
+            tiltGesturesEnabled: false,
+          ),
+        ),
+
+        // ── Info ──────────────────────────────────────────────
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Título
+                const Text(
+                  'Ubicación',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+
+                // Dirección
+                _InfoBlock(
+                  label: 'Ubicación aproximada',
+                  value: result.address ?? 'Ubicación registrada',
+                ),
+                const Divider(height: 32),
+
+                // Chips de hora, día y mes
+                const Text(
+                  'Información de registro de la asistencia',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _InfoChip(icon: Icons.access_time_rounded, label: hour),
+                    _InfoChip(icon: Icons.calendar_today_rounded, label: day),
+                    _InfoChip(icon: Icons.place_rounded, label: month),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Badge de éxito
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green.shade600),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Asistencia registrada exitosamente',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Widgets auxiliares ───────────────────────────────────────
+
+class _InfoBlock extends StatelessWidget {
+  final String label;
+  final String value;
+  const _InfoBlock({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _InfoChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: Colors.blue.shade400),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+}
+
+/*class _SuccessView extends StatelessWidget {
+  final AttendanceResult result;
+  const _SuccessView({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final pos = LatLng(result.latitude, result.longitude);
     final timeStr = DateFormat('dd/MM/yyyy HH:mm').format(result.markedAt);
 
     return Column(
@@ -124,7 +275,7 @@ class _SuccessView extends StatelessWidget {
       ],
     );
   }
-}
+}*/
 
 class _ErrorView extends ConsumerWidget {
   final String message;

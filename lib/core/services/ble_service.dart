@@ -5,24 +5,23 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 class BleService {
   static final _peripheral = FlutterBlePeripheral();
 
-  // ── DOCENTE: emitir código ──────────────────────────────────────────────────
-
-  /// El código de sesión SE USA DIRECTAMENTE como ServiceUUID.
-  /// iOS lo expone completo y sin truncar durante el scan.
   static Future<void> startAdvertising(String codeClassSession) async {
     final advertiseData = AdvertiseData(
-      serviceUuid: codeClassSession, // ← UUID completo como service
-      includeDeviceName: false, // ya no necesitamos el nombre
+      serviceUuid: codeClassSession,
+      includeDeviceName: false,
     );
-
-    await _peripheral.start(advertiseData: advertiseData);
+    final advertiseSettings = AdvertiseSettings(
+      advertiseMode: AdvertiseMode.advertiseModeBalanced,
+      txPowerLevel: AdvertiseTxPower.advertiseTxPowerHigh,
+      timeout: 0,
+    );
+    await _peripheral.start(
+      advertiseData: advertiseData,
+      advertiseSettings: advertiseSettings,
+    );
   }
 
-  static Future<void> stopAdvertising() async {
-    await _peripheral.stop();
-  }
-
-  // ── ALUMNO: escanear y leer código ─────────────────────────────────────────
+  static Future<void> stopAdvertising() async => await _peripheral.stop();
 
   static Future<String> scanForCode(String codeClassSession) async {
     final adapterState = await FlutterBluePlus.adapterState.first;
@@ -30,48 +29,75 @@ class BleService {
       throw Exception('Bluetooth está apagado.');
     }
 
+    // Limpia scan anterior colgado
+    if (FlutterBluePlus.isScanningNow) {
+      await FlutterBluePlus.stopScan();
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+
     final completer = Completer<String>();
     StreamSubscription? scanSub;
 
-    // Filtra directamente por el serviceUUID → más eficiente, menos batería
+    scanSub = FlutterBluePlus.onScanResults.listen(
+      (results) {
+        // Guard: si ya completó, ignorar todo
+        if (completer.isCompleted) return;
+        if (results.isEmpty) return;
+
+        for (final result in results) {
+          final services = result.advertisementData.serviceUuids;
+
+          final found = services.any(
+            (s) => s.toString().toLowerCase() == codeClassSession.toLowerCase(),
+          );
+
+          if (found) {
+            // 1. Cancelar sub primero para que no vuelva a entrar
+            scanSub?.cancel();
+            scanSub = null;
+            // 2. Completar
+            completer.complete(codeClassSession);
+            // 3. Detener scan en background (sin await, ya estamos fuera)
+            FlutterBluePlus.stopScan().ignore();
+            return;
+          }
+        }
+      },
+      onError: (e) {
+        if (!completer.isCompleted) {
+          completer.completeError(e);
+        }
+      },
+      cancelOnError: true,
+    );
+
+    // Iniciar scan DESPUÉS de suscribirse para no perder eventos
     await FlutterBluePlus.startScan(
       withServices: [Guid(codeClassSession)],
+      androidScanMode: AndroidScanMode.lowLatency,
       timeout: const Duration(seconds: 15),
     );
 
-    scanSub = FlutterBluePlus.scanResults.listen((results) {
-      for (final result in results) {
-        final services = result.advertisementData.serviceUuids;
-
-        print('📡 DEVICE: ${result.device.remoteId}');
-        print('📡 SERVICES: $services');
-        print('📡 RSSI: ${result.rssi}');
-
-        final found = services.any(
-          (s) => s.toString().toLowerCase() == codeClassSession.toLowerCase(),
-        );
-
-        if (found && !completer.isCompleted) {
-          FlutterBluePlus.stopScan();
+    try {
+      return await completer.future.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
           scanSub?.cancel();
-          completer.complete(codeClassSession);
-        }
-      }
-    });
-
-    return completer.future.timeout(
-      const Duration(seconds: 15),
-      onTimeout: () {
-        scanSub?.cancel();
-        FlutterBluePlus.stopScan();
-        throw Exception(
-          'No se encontró sesión activa cerca.\n'
-          'Asegúrate de que:\n'
-          '• El docente haya iniciado el llamado a lista\n'
-          '• Tengas Bluetooth activado\n'
-          '• Estés cerca del docente',
-        );
-      },
-    );
+          FlutterBluePlus.stopScan().ignore();
+          throw Exception(
+            'No se encontró sesión activa cerca.\n'
+            'Asegúrate de que:\n'
+            '• El docente haya iniciado el llamado a lista\n'
+            '• Tengas Bluetooth activado\n'
+            '• Estés cerca del docente',
+          );
+        },
+      );
+    } catch (e) {
+      // Limpieza garantizada si algo falla
+      scanSub?.cancel();
+      FlutterBluePlus.stopScan().ignore();
+      rethrow;
+    }
   }
 }
