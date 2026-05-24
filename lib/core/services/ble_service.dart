@@ -29,7 +29,6 @@ class BleService {
       throw Exception('Bluetooth está apagado.');
     }
 
-    // Limpia scan anterior colgado
     if (FlutterBluePlus.isScanningNow) {
       await FlutterBluePlus.stopScan();
       await Future.delayed(const Duration(milliseconds: 200));
@@ -40,7 +39,6 @@ class BleService {
 
     scanSub = FlutterBluePlus.onScanResults.listen(
       (results) {
-        // Guard: si ya completó, ignorar todo
         if (completer.isCompleted) return;
         if (results.isEmpty) return;
 
@@ -52,12 +50,9 @@ class BleService {
           );
 
           if (found) {
-            // 1. Cancelar sub primero para que no vuelva a entrar
             scanSub?.cancel();
             scanSub = null;
-            // 2. Completar
             completer.complete(codeClassSession);
-            // 3. Detener scan en background (sin await, ya estamos fuera)
             FlutterBluePlus.stopScan().ignore();
             return;
           }
@@ -71,7 +66,6 @@ class BleService {
       cancelOnError: true,
     );
 
-    // Iniciar scan DESPUÉS de suscribirse para no perder eventos
     await FlutterBluePlus.startScan(
       withServices: [Guid(codeClassSession)],
       androidScanMode: AndroidScanMode.lowLatency,
@@ -94,7 +88,6 @@ class BleService {
         },
       );
     } catch (e) {
-      // Limpieza garantizada si algo falla
       scanSub?.cancel();
       FlutterBluePlus.stopScan().ignore();
       rethrow;

@@ -4,9 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PermissionService {
-  // ── Permisos según plataforma ─────────────────────────────────────────────
-  // iOS  → Permission.bluetooth (uno solo)
-  // Android → tres permisos separados
+  //TODO: Permisos según plataforma
   static List<Permission> get _btPerms => Platform.isIOS
       ? [Permission.bluetooth]
       : [
@@ -15,7 +13,6 @@ class PermissionService {
           Permission.bluetoothAdvertise,
         ];
 
-  // ── Verificación silenciosa (sin diálogos) ────────────────────────────────
   static Future<bool> bluetoothGranted() async {
     if (Platform.isIOS) {
       try {
@@ -31,7 +28,6 @@ class PermissionService {
       }
     }
 
-    // Android → comportamiento original
     for (final p in _btPerms) {
       if (!(await p.status).isGranted) return false;
     }
@@ -46,7 +42,6 @@ class PermissionService {
   static Future<bool> allGranted() async =>
       await bluetoothGranted() && await locationGranted();
 
-  // ── Solicitud de Bluetooth ────────────────────────────────────────────────
   static Future<_PermStatus> requestBluetooth() async {
     for (final p in _btPerms) {
       final s = await p.status;
@@ -60,7 +55,7 @@ class PermissionService {
     return _PermStatus.granted;
   }
 
-  // ── Solicitud de Ubicación ────────────────────────────────────────────────
+  //TODO: solicitud de ubicaicon
   static Future<_PermStatus> requestLocation() async {
     LocationPermission p = await Geolocator.checkPermission();
     if (p == LocationPermission.deniedForever) {
@@ -75,10 +70,7 @@ class PermissionService {
     return _PermStatus.granted;
   }
 
-  // ── Estado de servicios (encendido/apagado) ───────────────────────────────
-
-  // ✅ CAMBIO: espera a que iOS reporte un estado real del adaptador
-  // antes devolvía .first que capturaba "unknown" y retornaba false
+  //TODO: estado de servicios (encedid - apagado)
   static Future<bool> isBluetoothOn() async {
     try {
       final state = await FlutterBluePlus.adapterState

@@ -16,12 +16,12 @@ class OpenSessionNotifier extends StateNotifier<OpenSessionState> {
   Future<void> open(String groupId, {String? classTopic}) async {
     state = state.copyWith(status: OpenSessionStatus.loading, error: null);
     try {
-      // 2. GPS
+   
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // 3. Crear sesión en el backend
+    
       final result = await ClassSessionService().openSession(
         groupId: groupId,
         latitude: pos.latitude,
@@ -29,7 +29,7 @@ class OpenSessionNotifier extends StateNotifier<OpenSessionState> {
         classTopic: classTopic,
       );
 
-      // 4. Emitir código por BLE para que los alumnos lo reciban
+     
       await BleService.startAdvertising(result.codeClassSession);
 
       state = state.copyWith(

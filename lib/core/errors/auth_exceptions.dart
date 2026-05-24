@@ -1,4 +1,4 @@
-class InvalidCredentialsException implements Exception {
+/*class InvalidCredentialsException implements Exception {
   final String message;
   const InvalidCredentialsException([
     this.message = 'Email o contraseña incorrectos',
@@ -18,3 +18,4 @@ class UserNotFoundException implements Exception {
     this.message = 'Usuario no encontrado o sin acceso',
   ]);
 }
+ */

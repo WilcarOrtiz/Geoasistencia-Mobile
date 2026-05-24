@@ -8,7 +8,6 @@ final attendanceSourceProvider = Provider<AttendanceSource>((ref) {
   final source = PollingAttendanceSource(ClassSessionService());
   ref.onDispose(source.dispose);
   return source;
-  // 🔜 WebSocket: return WebSocketAttendanceSource(WebSocketService());
 });
 
 final attendanceProvider =

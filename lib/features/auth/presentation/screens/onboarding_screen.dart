@@ -5,19 +5,6 @@ import 'package:geoasistencia/core/services/permission_service.dart';
 import 'package:geoasistencia/core/utils/storage.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// OnboardingScreen
-//
-// Flujo de páginas:
-//   0 · Bienvenida
-//   1 · Para qué sirve el Bluetooth  → botón pide permiso BT
-//   2 · Para qué sirve la Ubicación  → botón pide permiso GPS
-//   3 · Todo listo → ir a Login
-//
-// Los permisos se piden UNA SOLA VEZ aquí.
-// Los días siguientes el Splash detecta allGranted() == true y no pasa por aquí.
-// ─────────────────────────────────────────────────────────────────────────────
-
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -29,7 +16,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
   int _page = 0;
 
-  // Estado de permisos (para actualizar el botón en tiempo real)
   bool _btGranted = false;
   bool _locGranted = false;
   bool _btRequesting = false;
@@ -51,8 +37,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       });
   }
 
-  // ── Navegación ────────────────────────────────────────────────────────────
-
   void _next() {
     if (_page < 3) {
       _controller.nextPage(
@@ -69,8 +53,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     Navigator.pushReplacementNamed(context, AppRoutes.login);
   }
 
-  // ── Solicitud de permisos ─────────────────────────────────────────────────
-
   Future<void> _requestBt() async {
     setState(() => _btRequesting = true);
     final r = await PermissionService.requestBluetooth();
@@ -83,7 +65,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _requestLoc() async {
     setState(() => _locRequesting = true);
-    // Pequeña pausa en iOS para asegurarnos de que el sistema está listo
     if (Platform.isIOS) await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
     final r = await PermissionService.requestLocation();
@@ -94,15 +75,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_locGranted) _next();
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            // Botón saltar (solo en páginas 0-1, no en las de permisos)
             Align(
               alignment: Alignment.topRight,
               child: AnimatedOpacity(
@@ -115,12 +93,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // Páginas
             Expanded(
               child: PageView(
                 controller: _controller,
-                physics:
-                    const NeverScrollableScrollPhysics(), // solo con botones
+                physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (i) => setState(() => _page = i),
                 children: [
                   _PageWelcome(onNext: _next),
@@ -141,7 +117,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // Indicadores de página
             Padding(
               padding: const EdgeInsets.only(bottom: 24),
               child: Row(
@@ -155,8 +130,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 }
-
-// ── Páginas individuales ──────────────────────────────────────────────────────
 
 class _PageWelcome extends StatelessWidget {
   final VoidCallback onNext;
@@ -274,8 +247,6 @@ class _PageReady extends StatelessWidget {
   }
 }
 
-// ── Componentes UI ────────────────────────────────────────────────────────────
-
 class _PageShell extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -379,7 +350,7 @@ class _GrantedButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FilledButton.icon(
-      onPressed: null, // deshabilitado visualmente
+      onPressed: null,
       icon: const Icon(Icons.check_circle),
       label: const Text('Permiso concedido'),
       style: FilledButton.styleFrom(

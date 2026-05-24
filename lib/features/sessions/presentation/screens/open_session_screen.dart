@@ -19,7 +19,7 @@ class OpenSessionScreen extends ConsumerWidget {
       }
     });
 
-    // Al salir de la pantalla cierra el BLE y la sesión en el backend
+
     return PopScope(
       canPop: state.status != OpenSessionStatus.loading,
       onPopInvokedWithResult: (didPop, _) async {

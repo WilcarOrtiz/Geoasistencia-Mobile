@@ -9,11 +9,12 @@ final userRoleProvider = Provider<UserRole>((ref) {
   if (authData == null) return UserRole.unknown;
 
   final roles = authData.roles.map((r) => r.name.toUpperCase().trim()).toList();
-
-  print('Roles recibidos: $roles'); // puedes borrarlo después
+  print("roles: ");
+  print(roles);
 
   if (roles.contains('TEACHER')) return UserRole.teacher;
   if (roles.contains('ADMIN')) return UserRole.admin;
   if (roles.contains('STUDENT')) return UserRole.student;
+  
   return UserRole.unknown;
 });

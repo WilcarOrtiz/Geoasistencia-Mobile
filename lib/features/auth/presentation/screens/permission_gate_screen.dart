@@ -33,8 +33,6 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState s) {
     if (s == AppLifecycleState.resumed) {
-      // ✅ Espera un momento antes de verificar
-      // iOS necesita tiempo para actualizar el estado del BT
       Future.delayed(const Duration(milliseconds: 800), _run);
     }
   }
@@ -43,7 +41,6 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
     if (!mounted) return;
     setState(() => _s = _State.checking);
 
-    // ✅ Pequeña pausa adicional para que el adaptador BT se estabilice
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
 
@@ -67,7 +64,6 @@ class _PermissionGateScreenState extends State<PermissionGateScreen>
       return;
     }
 
-    // ✅ Verifica que sigue montado antes de navegar
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, widget.nextRoute);
   }

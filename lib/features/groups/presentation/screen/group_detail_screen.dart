@@ -13,6 +13,7 @@ class GroupDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final role = ref.watch(userRoleProvider);
+    print(role);
     final classDays = ref.watch(classDayProvider(group.id));
 
     return Scaffold(
@@ -63,7 +64,6 @@ class GroupDetailScreen extends ConsumerWidget {
 
             const SizedBox(height: 30),
 
-            // BOTONES SEGÚN ROL
             if (role == UserRole.teacher)
               _PrimaryButton(
                 text: 'Iniciar llamado a lista',
@@ -83,7 +83,7 @@ class GroupDetailScreen extends ConsumerWidget {
                     onPressed: () => Navigator.pushNamed(
                       context,
                       AppRoutes.markAttendance,
-                      arguments: group.id, // FIX: groupId requerido
+                      arguments: group.id,
                     ),
                   ),
                   const SizedBox(height: 12),

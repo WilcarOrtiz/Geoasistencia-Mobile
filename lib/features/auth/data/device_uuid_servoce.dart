@@ -14,9 +14,6 @@ class DeviceService {
     if (id == null) {
       id = const Uuid().v4();
       await prefs.setString('device_id', id);
-      print('🆕 [DeviceService] UUID generado: $id');
-    } else {
-      print('✅ [DeviceService] UUID recuperado: $id');
     }
 
     _deviceId = id;

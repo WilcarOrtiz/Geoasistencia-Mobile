@@ -182,15 +182,12 @@ class _SessionTile extends StatelessWidget {
       child: ListTile(
         leading: Icon(_statusIcon, color: _statusColor),
 
-        // 👇 ahora solo fecha
         title: Text(_formattedDate),
 
-        // 👇 hora (si existe)
         subtitle: session.checkInTime != null
             ? Text('Hora: ${session.checkInTime}')
             : null,
 
-        // 👇 estado
         trailing: Text(
           _statusLabel,
           style: TextStyle(color: _statusColor, fontWeight: FontWeight.w600),

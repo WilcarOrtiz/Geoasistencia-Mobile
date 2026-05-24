@@ -105,28 +105,24 @@ class _SuccessView extends StatelessWidget {
           ),
         ),
 
-        // ── Info ──────────────────────────────────────────────
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Título
                 const Text(
                   'Ubicación',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
 
-                // Dirección
                 _InfoBlock(
                   label: 'Ubicación aproximada',
                   value: result.address ?? 'Ubicación registrada',
                 ),
                 const Divider(height: 32),
 
-                // Chips de hora, día y mes
                 const Text(
                   'Información de registro de la asistencia',
                   style: TextStyle(color: Colors.grey, fontSize: 13),
@@ -143,7 +139,6 @@ class _SuccessView extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // Badge de éxito
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -174,8 +169,6 @@ class _SuccessView extends StatelessWidget {
     );
   }
 }
-
-// ── Widgets auxiliares ───────────────────────────────────────
 
 class _InfoBlock extends StatelessWidget {
   final String label;
@@ -222,60 +215,6 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
-
-/*class _SuccessView extends StatelessWidget {
-  final AttendanceResult result;
-  const _SuccessView({required this.result});
-
-  @override
-  Widget build(BuildContext context) {
-    final pos = LatLng(result.latitude, result.longitude);
-    final timeStr = DateFormat('dd/MM/yyyy HH:mm').format(result.markedAt);
-
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          color: Colors.green.shade50,
-          child: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 32),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Asistencia registrada',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(timeStr, style: const TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: GoogleMap(
-            initialCameraPosition: CameraPosition(target: pos, zoom: 17),
-            markers: {
-              Marker(
-                markerId: const MarkerId('student'),
-                position: pos,
-                infoWindow: InfoWindow(title: 'Tu ubicación', snippet: timeStr),
-              ),
-            },
-            myLocationEnabled: true,
-          ),
-        ),
-      ],
-    );
-  }
-}*/
 
 class _ErrorView extends ConsumerWidget {
   final String message;

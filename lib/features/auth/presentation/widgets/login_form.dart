@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geoasistencia/core/constants/app_routes.dart';
-import 'package:geoasistencia/core/errors/auth_exceptions.dart';
+import 'package:geoasistencia/core/network/api_exception.dart';
 import 'package:geoasistencia/core/services/permission_service.dart';
 import 'package:geoasistencia/core/utils/app_toast.dart';
 import 'package:geoasistencia/features/auth/presentation/providers/auth_provider.dart';
@@ -38,6 +38,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
       next.whenOrNull(
         data: (_) async {
           final permsOk = await PermissionService.allGranted();
+
           if (!context.mounted) return;
 
           if (permsOk) {
@@ -51,19 +52,10 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           }
         },
         error: (e, _) {
-          switch (e) {
-            case InvalidCredentialsException():
-              AppToast.error(
-                context,
-                e.message,
-                title: 'Credenciales incorrectas',
-              );
-            case UserNotFoundException():
-              AppToast.error(context, e.message, title: 'Usuario sin acceso');
-            case ServerException():
-              AppToast.error(context, e.message, title: 'Error del servidor');
-            default:
-              AppToast.error(context, e.toString(), title: 'Error inesperado');
+          if (e is ApiException) {
+            AppToast.error(context, e.message, title: 'Error');
+          } else {
+            AppToast.error(context, 'Error inesperado', title: 'Error');
           }
         },
       );

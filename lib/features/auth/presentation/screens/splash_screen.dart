@@ -16,7 +16,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // ✅ Solo se llama UNA vez, no en cada rebuild
     WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
