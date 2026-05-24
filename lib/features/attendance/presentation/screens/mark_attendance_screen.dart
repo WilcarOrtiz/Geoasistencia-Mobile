@@ -1,7 +1,7 @@
-// features/attendance/presentation/screens/mark_attendance_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geoasistencia/core/theme/app_theme.dart';
 import 'package:geoasistencia/features/attendance/presentation/providers/mark_attendance_provider.dart';
 import 'package:intl/intl.dart';
 
@@ -14,26 +14,26 @@ class MarkAttendanceScreen extends ConsumerWidget {
     final state = ref.watch(markAttendanceProvider(groupId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrar asistencia')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Registrar asistencia'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: state.when(
         data: (result) => result == null
             ? _ScanView(groupId: groupId)
             : _SuccessView(result: result),
-        loading: () => const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Buscando sesión BLE y verificando ubicación...'),
-            ],
-          ),
-        ),
+        loading: () => const _LoadingView(),
         error: (e, _) => _ErrorView(message: e.toString(), groupId: groupId),
       ),
     );
   }
 }
+
+// ── Scan View ──────────────────────────────────────────────────────
 
 class _ScanView extends ConsumerWidget {
   final String groupId;
@@ -41,29 +41,118 @@ class _ScanView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.bluetooth_searching, size: 80, color: Colors.blue),
-          const SizedBox(height: 24),
-          const Text(
-            'Asegúrate de estar cerca del docente y tener Bluetooth activado.\nSe verificará tu ubicación GPS.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.check_circle_outline),
-              label: const Text('Registrar mi asistencia'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+    return GreenGradientBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Animated icon container
+              _PulsingIcon(),
+
+              const SizedBox(height: 36),
+
+              Text('Registrar asistencia', style: AppTextStyles.displaySm),
+              const SizedBox(height: 12),
+              Text(
+                'Asegúrate de estar cerca del docente y tener '
+                'Bluetooth activado. Se verificará tu ubicación GPS.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMd.copyWith(height: 1.65),
               ),
-              onPressed: () =>
-                  ref.read(markAttendanceProvider(groupId).notifier).mark(),
+
+              const SizedBox(height: 12),
+
+              // ── Requirements chips ──────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  InfoChip(icon: Icons.bluetooth_rounded, label: 'Bluetooth'),
+                  SizedBox(width: 10),
+                  InfoChip(icon: Icons.location_on_rounded, label: 'GPS'),
+                ],
+              ),
+
+              const SizedBox(height: 44),
+
+              AppPrimaryButton(
+                label: 'Registrar mi asistencia',
+                icon: Icons.check_circle_outline_rounded,
+                onPressed: () =>
+                    ref.read(markAttendanceProvider(groupId).notifier).mark(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PulsingIcon extends StatefulWidget {
+  @override
+  State<_PulsingIcon> createState() => _PulsingIconState();
+}
+
+class _PulsingIconState extends State<_PulsingIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+    _anim = Tween(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _anim,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: AppColors.primarySurface,
+              shape: BoxShape.circle,
+            ),
+          ),
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+          ),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.bluetooth_searching_rounded,
+              color: Colors.white,
+              size: 32,
             ),
           ),
         ],
@@ -71,6 +160,34 @@ class _ScanView extends ConsumerWidget {
     );
   }
 }
+
+// ── Loading View ───────────────────────────────────────────────────
+
+class _LoadingView extends StatelessWidget {
+  const _LoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return GreenGradientBackground(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: AppColors.primary),
+            const SizedBox(height: 20),
+            Text(
+              'Buscando sesión BLE y verificando ubicación...',
+              style: AppTextStyles.bodyMd,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Success View ───────────────────────────────────────────────────
 
 class _SuccessView extends StatelessWidget {
   final AttendanceResult result;
@@ -85,16 +202,16 @@ class _SuccessView extends StatelessWidget {
 
     return Column(
       children: [
-        // ── Mapa ──────────────────────────────────────────────
+        // ── Map ───────────────────────────────────────────────
         SizedBox(
-          height: 260,
+          height: 240,
           child: GoogleMap(
             initialCameraPosition: CameraPosition(target: pos, zoom: 17),
             markers: {
               Marker(
                 markerId: const MarkerId('student'),
                 position: pos,
-                infoWindow: InfoWindow(title: 'Tu ubicación'),
+                infoWindow: const InfoWindow(title: 'Tu ubicación'),
               ),
             },
             myLocationEnabled: false,
@@ -105,40 +222,14 @@ class _SuccessView extends StatelessWidget {
           ),
         ),
 
+        // ── Info panel ────────────────────────────────────────
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Ubicación',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-
-                _InfoBlock(
-                  label: 'Ubicación aproximada',
-                  value: result.address ?? 'Ubicación registrada',
-                ),
-                const Divider(height: 32),
-
-                const Text(
-                  'Información de registro de la asistencia',
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _InfoChip(icon: Icons.access_time_rounded, label: hour),
-                    _InfoChip(icon: Icons.calendar_today_rounded, label: day),
-                    _InfoChip(icon: Icons.place_rounded, label: month),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
+                // ── Success banner ────────────────────────────
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -146,20 +237,58 @@ class _SuccessView extends StatelessWidget {
                     horizontal: 16,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.green.shade200),
+                    color: AppColors.successSurface,
+                    borderRadius: AppRadius.mdBr,
+                    border: Border.all(
+                      color: AppColors.success.withOpacity(0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle, color: Colors.green.shade600),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.present,
+                        size: 22,
+                      ),
                       const SizedBox(width: 10),
-                      const Text(
+                      Text(
                         'Asistencia registrada exitosamente',
-                        style: TextStyle(fontWeight: FontWeight.w500),
+                        style: AppTextStyles.labelMd.copyWith(
+                          color: AppColors.primaryDark,
+                        ),
                       ),
                     ],
                   ),
+                ),
+
+                const SizedBox(height: 20),
+
+                Text('Ubicación registrada', style: AppTextStyles.h2),
+                const SizedBox(height: 4),
+                Text(
+                  result.address ?? 'Ubicación registrada correctamente',
+                  style: AppTextStyles.bodyMd,
+                ),
+
+                const SizedBox(height: 20),
+
+                Text(
+                  'Detalles del registro',
+                  style: AppTextStyles.labelSm.copyWith(
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    InfoChip(icon: Icons.access_time_rounded, label: hour),
+                    InfoChip(icon: Icons.calendar_today_rounded, label: day),
+                    InfoChip(icon: Icons.event_rounded, label: month),
+                  ],
                 ),
               ],
             ),
@@ -170,51 +299,7 @@ class _SuccessView extends StatelessWidget {
   }
 }
 
-class _InfoBlock extends StatelessWidget {
-  final String label;
-  final String value;
-  const _InfoBlock({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-        ),
-      ],
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _InfoChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18, color: Colors.blue.shade400),
-          const SizedBox(width: 6),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
-}
+// ── Error View ─────────────────────────────────────────────────────
 
 class _ErrorView extends ConsumerWidget {
   final String message;
@@ -223,25 +308,41 @@ class _ErrorView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () =>
-                ref.read(markAttendanceProvider(groupId).notifier).mark(),
-            child: const Text('Reintentar'),
-          ),
-        ],
+    return GreenGradientBackground(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.errorSurface,
+                borderRadius: AppRadius.xlBr,
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: AppColors.error,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text('No se pudo registrar', style: AppTextStyles.h1),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.error),
+            ),
+            const SizedBox(height: 36),
+            AppPrimaryButton(
+              label: 'Reintentar',
+              icon: Icons.refresh_rounded,
+              onPressed: () =>
+                  ref.read(markAttendanceProvider(groupId).notifier).mark(),
+            ),
+          ],
+        ),
       ),
     );
   }
