@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geoasistencia/core/constants/app_routes.dart';
 import 'package:geoasistencia/core/theme/app_theme.dart';
 import 'package:geoasistencia/features/auth/presentation/providers/auth_provider.dart';
+import 'package:geoasistencia/features/auth/presentation/providers/role_provider.dart';
 import 'package:geoasistencia/features/groups/presentation/providers/groups_provider.dart';
 import 'package:geoasistencia/features/groups/presentation/widgets/groups_teacher_view.dart';
 
@@ -11,11 +12,30 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authData = ref.watch(authProvider).asData?.value;
-    final user = authData?.user;
-    final grupos = ref.watch(groupsProvider);
+    // Escuchar cambios de auth para redirigir si la sesión expira
+    ref.listen<AsyncValue<dynamic>>(authProvider, (_, next) {
+      next.whenData((user) {
+        if (user == null && context.mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.login,
+            (_) => false,
+          );
+        }
+      });
+    });
 
-    final firstName = user?.fullName.split(' ').first ?? '';
+    final authData = ref.watch(authProvider).asData?.value;
+    final role = ref.watch(userRoleProvider);
+
+    // Si no hay usuario (estado transitorio), mostrar loading
+    if (authData == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final user = authData.user;
+    final grupos = ref.watch(groupsProvider);
+    final firstName = user.fullName.split(' ').first;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -32,7 +52,7 @@ class HomeScreen extends ConsumerWidget {
               flexibleSpace: FlexibleSpaceBar(
                 background: _HeaderBanner(
                   firstName: firstName,
-                  role: authData?.roles.map((r) => r.name).join(', ') ?? '',
+                  role: authData.roles.map((r) => r.name).join(', '),
                 ),
               ),
               actions: [
@@ -163,9 +183,16 @@ class _LogoutButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: () async {
+        // Limpiar todos los providers y storage antes de navegar
         await ref.read(authProvider.notifier).logout();
+        // Invalidar providers de grupos para limpiar datos del usuario anterior
+        ref.invalidate(groupsProvider);
         if (!context.mounted) return;
-        Navigator.pushReplacementNamed(context, AppRoutes.login);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.login,
+          (_) => false,
+        );
       },
       icon: Container(
         padding: const EdgeInsets.all(6),

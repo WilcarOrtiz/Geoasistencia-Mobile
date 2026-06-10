@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geoasistencia/core/constants/app_routes.dart';
 import 'package:geoasistencia/core/theme/app_theme.dart';
+import 'package:geoasistencia/features/auth/presentation/providers/auth_provider.dart';
 import 'package:geoasistencia/features/auth/presentation/providers/role_provider.dart';
 import 'package:geoasistencia/features/groups/domain/group.dart';
 import 'package:geoasistencia/features/groups/presentation/providers/class_day_provider.dart';
@@ -12,6 +13,20 @@ class GroupDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Redirigir si el usuario cerró sesión
+    ref.listen<AsyncValue<dynamic>>(authProvider, (_, next) {
+      next.whenData((user) {
+        if (user == null && context.mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.login,
+            (_) => false,
+          );
+        }
+      });
+    });
+
+    // Obtener rol desde authProvider (reactivo)
     final role = ref.watch(userRoleProvider);
     final classDays = ref.watch(classDayProvider(group.id));
 
@@ -20,7 +35,6 @@ class GroupDetailScreen extends ConsumerWidget {
       body: GreenGradientBackground(
         child: CustomScrollView(
           slivers: [
-            // ── SliverAppBar con el header del grupo ─────────
             SliverAppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
@@ -42,11 +56,9 @@ class GroupDetailScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Stats cards ───────────────────────────
                     _StatsRow(group: group),
                     const SizedBox(height: 24),
 
-                    // ── Información ───────────────────────────
                     Text('Información del grupo', style: AppTextStyles.h2),
                     const SizedBox(height: 12),
                     AppCard(
@@ -93,7 +105,6 @@ class GroupDetailScreen extends ConsumerWidget {
 
                     const SizedBox(height: 24),
 
-                    // ── Días de clase ─────────────────────────
                     Text('Días de clase', style: AppTextStyles.h2),
                     const SizedBox(height: 12),
                     classDays.when(
@@ -130,41 +141,11 @@ class GroupDetailScreen extends ConsumerWidget {
 
                     const SizedBox(height: 32),
 
-                    // ── CTA Buttons ───────────────────────────
-                    if (role == UserRole.teacher)
-                      AppPrimaryButton(
-                        label: 'Iniciar llamado a lista',
-                        icon: Icons.play_arrow_rounded,
-                        onPressed: () => Navigator.pushNamed(
-                          context,
-                          AppRoutes.openSession,
-                          arguments: group.id,
-                        ),
-                      )
-                    else
-                      Column(
-                        children: [
-                          AppPrimaryButton(
-                            label: 'Registrar mi asistencia',
-                            icon: Icons.check_circle_outline_rounded,
-                            onPressed: () => Navigator.pushNamed(
-                              context,
-                              AppRoutes.markAttendance,
-                              arguments: group.id,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          AppOutlinedButton(
-                            label: 'Ver mi historial',
-                            icon: Icons.history_rounded,
-                            onPressed: () => Navigator.pushNamed(
-                              context,
-                              AppRoutes.myAttendance,
-                              arguments: group.id,
-                            ),
-                          ),
-                        ],
-                      ),
+                    // ── CTA Buttons según rol ─────────────────
+                    // El rol se lee reactivamente de userRoleProvider
+                    // que depende de authProvider: si el usuario cambia,
+                    // esto se reconstruye con el rol correcto.
+                    _RoleButtons(group: group, role: role),
 
                     const SizedBox(height: 24),
                   ],
@@ -174,6 +155,59 @@ class GroupDetailScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Botones de acción según el rol del usuario actual.
+/// Separado en widget para claridad y para que se reconstruya
+/// correctamente cuando cambia el rol.
+class _RoleButtons extends StatelessWidget {
+  final Group group;
+  final UserRole role;
+
+  const _RoleButtons({required this.group, required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    // Solo mostrar botones si el rol es conocido
+    if (role == UserRole.unknown) return const SizedBox.shrink();
+
+    if (role == UserRole.teacher) {
+      return AppPrimaryButton(
+        label: 'Iniciar llamado a lista',
+        icon: Icons.play_arrow_rounded,
+        onPressed: () => Navigator.pushNamed(
+          context,
+          AppRoutes.openSession,
+          arguments: group.id,
+        ),
+      );
+    }
+
+    // Estudiante
+    return Column(
+      children: [
+        AppPrimaryButton(
+          label: 'Registrar mi asistencia',
+          icon: Icons.check_circle_outline_rounded,
+          onPressed: () => Navigator.pushNamed(
+            context,
+            AppRoutes.markAttendance,
+            arguments: group.id,
+          ),
+        ),
+        const SizedBox(height: 12),
+        AppOutlinedButton(
+          label: 'Ver mi historial',
+          icon: Icons.history_rounded,
+          onPressed: () => Navigator.pushNamed(
+            context,
+            AppRoutes.myAttendance,
+            arguments: group.id,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -297,8 +331,6 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
-
-// ── Info Row ──────────────────────────────────────────────────────
 
 class _InfoRow extends StatelessWidget {
   final IconData icon;

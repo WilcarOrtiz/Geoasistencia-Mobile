@@ -23,8 +23,16 @@ class AttendanceRecord {
         'LATE' => AttendanceStatus.late,
         _ => AttendanceStatus.absent,
       },
+      /* checkInTime: json['check_in_time'] != null  ? DateTime.parse(json['check_in_time'] as String) : null,*/
       checkInTime: json['check_in_time'] != null
-          ? DateTime.parse(json['check_in_time'] as String)
+          ? DateTime(
+              2000,
+              1,
+              1,
+              int.parse((json['check_in_time'] as String).split(':')[0]),
+              int.parse((json['check_in_time'] as String).split(':')[1]),
+              int.parse((json['check_in_time'] as String).split(':')[2]),
+            )
           : null,
       studentId: json['student']['id'] as String,
       studentName: json['student']['name'] as String,

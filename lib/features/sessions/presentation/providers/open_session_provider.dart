@@ -1,27 +1,28 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:geoasistencia/core/services/ble_service.dart';
+import 'package:geoasistencia/features/groups/presentation/providers/groups_provider.dart';
 import 'package:geoasistencia/features/sessions/data/class_session_service.dart';
 import 'package:geoasistencia/features/sessions/domain/session_state.dart';
 import 'package:geolocator/geolocator.dart';
 
 final openSessionProvider =
     StateNotifierProvider<OpenSessionNotifier, OpenSessionState>(
-      (_) => OpenSessionNotifier(),
+      (ref) => OpenSessionNotifier(ref),
     );
 
 class OpenSessionNotifier extends StateNotifier<OpenSessionState> {
-  OpenSessionNotifier() : super(const OpenSessionState());
+  final Ref _ref;
+  OpenSessionNotifier(this._ref) : super(const OpenSessionState());
 
   Future<void> open(String groupId, {String? classTopic}) async {
     state = state.copyWith(status: OpenSessionStatus.loading, error: null);
     try {
-   
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-    
       final result = await ClassSessionService().openSession(
         groupId: groupId,
         latitude: pos.latitude,
@@ -29,7 +30,6 @@ class OpenSessionNotifier extends StateNotifier<OpenSessionState> {
         classTopic: classTopic,
       );
 
-     
       await BleService.startAdvertising(result.codeClassSession);
 
       state = state.copyWith(
@@ -57,5 +57,6 @@ class OpenSessionNotifier extends StateNotifier<OpenSessionState> {
       } catch (_) {}
     }
     state = const OpenSessionState();
+    _ref.invalidate(groupsProvider);
   }
 }

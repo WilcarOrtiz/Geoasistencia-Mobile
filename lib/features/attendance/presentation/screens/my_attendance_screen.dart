@@ -33,8 +33,6 @@ class MyAttendanceScreen extends ConsumerWidget {
   }
 }
 
-// ── Body ───────────────────────────────────────────────────────────
-
 class _Body extends StatelessWidget {
   final MyAttendances data;
   const _Body({required this.data});
@@ -51,8 +49,6 @@ class _Body extends StatelessWidget {
     );
   }
 }
-
-// ── Summary ────────────────────────────────────────────────────────
 
 class _SummarySection extends StatelessWidget {
   final MyAttendances data;
@@ -129,7 +125,6 @@ class _SummarySection extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // ── Stat chips ────────────────────────────────────
           Row(
             children: [
               Expanded(
@@ -192,8 +187,6 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
-
-// ── Session List ───────────────────────────────────────────────────
 
 class _SessionList extends StatelessWidget {
   final List<MyAttendanceSession> sessions;

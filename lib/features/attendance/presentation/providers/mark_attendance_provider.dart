@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:geoasistencia/core/services/ble_service.dart';
@@ -21,12 +22,10 @@ class AttendanceResult {
   });
 }
 
-final markAttendanceProvider =
-    StateNotifierProvider.family<
-      MarkAttendanceNotifier,
-      AsyncValue<AttendanceResult?>,
-      String
-    >((ref, groupId) => MarkAttendanceNotifier(ref, groupId));
+final markAttendanceProvider = StateNotifierProvider.autoDispose
+    .family<MarkAttendanceNotifier, AsyncValue<AttendanceResult?>, String>(
+      (ref, groupId) => MarkAttendanceNotifier(ref, groupId),
+    );
 
 class MarkAttendanceNotifier
     extends StateNotifier<AsyncValue<AttendanceResult?>> {
@@ -44,20 +43,20 @@ class MarkAttendanceNotifier
         groupId,
       );
 
-      if (sessionCode == null)
+      if (sessionCode == null) {
         throw Exception('No hay sesión activa en tu grupo.');
-
-      if (!mounted) return;
+      }
 
       final code = await BleService.scanForCode(sessionCode);
 
-      if (!mounted) return;
+      // ✅ Verificar que el código BLE coincide con el de la sesión
+      if (code != sessionCode) {
+        throw Exception('Código BLE no coincide con la sesión activa.');
+      }
 
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-
-      if (!mounted) return;
 
       final authData = _ref.read(authProvider).asData?.value;
       final studentId = authData?.user.authId;
@@ -69,8 +68,6 @@ class MarkAttendanceNotifier
         latitude: pos.latitude,
         longitude: pos.longitude,
       );
-
-      if (!mounted) return;
 
       String? address;
       try {
@@ -84,8 +81,6 @@ class MarkAttendanceNotifier
         }
       } catch (_) {}
 
-      if (!mounted) return;
-
       state = AsyncValue.data(
         AttendanceResult(
           latitude: pos.latitude,
@@ -95,7 +90,9 @@ class MarkAttendanceNotifier
         ),
       );
     } catch (e, st) {
-      if (mounted) state = AsyncValue.error(e, st);
+      debugPrint('[MarkAttendance] ❌ Error: $e');
+      debugPrint('[MarkAttendance] StackTrace: $st');
+      state = AsyncValue.error(e, st);
     }
   }
 

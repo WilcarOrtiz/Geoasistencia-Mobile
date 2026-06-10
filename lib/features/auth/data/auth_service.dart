@@ -24,6 +24,21 @@ class AuthService {
       throw ApiException(e.message);
     }
 
+    return _fetchUserProfile();
+  }
+
+  Future<AuthData?> getCurrentUser() async {
+    final session = _supabase.auth.currentSession;
+    if (session == null) return null;
+
+    try {
+      return await _fetchUserProfile();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<AuthData> _fetchUserProfile() async {
     try {
       final deviceId = DeviceService.deviceId;
 
@@ -45,14 +60,6 @@ class AuthService {
 
       return apiResponse.data!;
     } on DioException catch (e) {
-      print('STATUS: ${e.response?.statusCode}');
-      print('DATA: ${e.response?.data}');
-
-      print('TYPE: ${e.type}');
-      print('MESSAGE: ${e.message}');
-      print('ERROR: ${e.error}');
-      print('RESPONSE: ${e.response}');
-
       final data = e.response?.data;
 
       if (data is Map && data['message'] != null) {

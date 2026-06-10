@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geoasistencia/core/theme/app_theme.dart';
 import 'package:geoasistencia/features/attendance/presentation/providers/mark_attendance_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart' as ll;
 
 class MarkAttendanceScreen extends ConsumerWidget {
   final String groupId;
@@ -32,8 +33,6 @@ class MarkAttendanceScreen extends ConsumerWidget {
     );
   }
 }
-
-// ── Scan View ──────────────────────────────────────────────────────
 
 class _ScanView extends ConsumerWidget {
   final String groupId;
@@ -161,8 +160,6 @@ class _PulsingIconState extends State<_PulsingIcon>
   }
 }
 
-// ── Loading View ───────────────────────────────────────────────────
-
 class _LoadingView extends StatelessWidget {
   const _LoadingView();
 
@@ -187,49 +184,60 @@ class _LoadingView extends StatelessWidget {
   }
 }
 
-// ── Success View ───────────────────────────────────────────────────
-
 class _SuccessView extends StatelessWidget {
   final AttendanceResult result;
   const _SuccessView({required this.result});
 
   @override
   Widget build(BuildContext context) {
-    final pos = LatLng(result.latitude, result.longitude);
+    final pos = ll.LatLng(result.latitude, result.longitude);
+
     final hour = DateFormat('hh:mm a').format(result.markedAt);
     final day = DateFormat('dd').format(result.markedAt);
     final month = DateFormat('MMMM', 'es').format(result.markedAt);
 
     return Column(
       children: [
-        // ── Map ───────────────────────────────────────────────
         SizedBox(
           height: 240,
-          child: GoogleMap(
-            initialCameraPosition: CameraPosition(target: pos, zoom: 17),
-            markers: {
-              Marker(
-                markerId: const MarkerId('student'),
-                position: pos,
-                infoWindow: const InfoWindow(title: 'Tu ubicación'),
+          child: FlutterMap(
+            options: MapOptions(
+              initialCenter: pos,
+              initialZoom: 17,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.none, // mapa bloqueado como antes
               ),
-            },
-            myLocationEnabled: false,
-            zoomControlsEnabled: false,
-            scrollGesturesEnabled: false,
-            rotateGesturesEnabled: false,
-            tiltGesturesEnabled: false,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                userAgentPackageName: 'com.geoasistencia.app',
+              ),
+
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: pos,
+                    width: 50,
+                    height: 50,
+                    child: const Icon(
+                      Icons.location_on,
+                      color: Colors.red,
+                      size: 40,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
 
-        // ── Info panel ────────────────────────────────────────
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Success banner ────────────────────────────
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -243,20 +251,15 @@ class _SuccessView extends StatelessWidget {
                       color: AppColors.success.withOpacity(0.3),
                     ),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.check_circle_rounded,
                         color: AppColors.present,
                         size: 22,
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Asistencia registrada exitosamente',
-                        style: AppTextStyles.labelMd.copyWith(
-                          color: AppColors.primaryDark,
-                        ),
-                      ),
+                      SizedBox(width: 10),
+                      Text('Asistencia registrada exitosamente'),
                     ],
                   ),
                 ),
@@ -271,15 +274,6 @@ class _SuccessView extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 20),
-
-                Text(
-                  'Detalles del registro',
-                  style: AppTextStyles.labelSm.copyWith(
-                    color: AppColors.textMuted,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 10),
 
                 Wrap(
                   spacing: 8,
@@ -298,8 +292,6 @@ class _SuccessView extends StatelessWidget {
     );
   }
 }
-
-// ── Error View ─────────────────────────────────────────────────────
 
 class _ErrorView extends ConsumerWidget {
   final String message;

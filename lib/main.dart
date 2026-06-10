@@ -8,6 +8,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+/// Clave global de navegación para redirigir desde fuera del árbol de widgets
+/// (por ejemplo, desde DioClient cuando recibe un 401 irrecuperable).
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es', null);
@@ -20,7 +24,12 @@ void main() async {
 
   await StorageService.init();
   await DeviceService.init();
+
+  DioClient.onUnauthorized = () {
+    navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (_) => false);
+  };
+
   DioClient.init();
 
-  runApp(const ProviderScope(child: App()));
+  runApp(ProviderScope(child: App()));
 }
