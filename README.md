@@ -1,7 +1,10 @@
 <p align="center">
-  <img src="https://storage.googleapis.com/cms-storage-bucket/6a07d8a62f4308d2b854.svg" width="80" alt="Flutter" />
+  <img
+    src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/flutter/flutter-original.svg"
+    width="120"
+    alt="Flutter"
+  />
 </p>
-
 <h1 align="center">GeoAsistencia — App Móvil</h1>
 
 <p align="center">
